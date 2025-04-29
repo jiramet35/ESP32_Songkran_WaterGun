@@ -1,0 +1,50 @@
+// ESP32 Transmitter Code
+#include <WiFi.h>
+#include <esp_now.h>
+
+const int joyXPin = 34;  // Joystick X  GPIO34
+
+uint8_t receiverAddress[] = {0x00,0x00}; // MAC Address ของ ESP32_Rx
+
+void setup() {
+  Serial.begin(115200);
+  delay(1000);
+
+  WiFi.mode(WIFI_STA);  //Station mode
+  WiFi.disconnect();
+
+  if (esp_now_init() != ESP_OK) {
+    Serial.println("ESP-NOW Init Failed");
+    while (true);
+  }
+  Serial.println("ESP-NOW Init Success");
+
+  // เพิ่ม Peer (ตัวรับ)
+  esp_now_peer_info_t peerInfo = {};
+  memcpy(peerInfo.peer_addr, receiverAddress, 6);
+  peerInfo.channel = 0;  
+  peerInfo.encrypt = false;
+
+  if (esp_now_add_peer(&peerInfo) != ESP_OK) {
+    Serial.println("Failed to add peer");
+    while (true);
+  }
+  
+  Serial.println("Peer Added");
+}
+
+void loop() {
+  int joyX = analogRead(joyXPin);  // Read Joystick X Axis
+
+  // ส่งข้อมูล
+  esp_err_t result = esp_now_send(receiverAddress, (uint8_t*)&joyX, sizeof(joyX));
+
+  if (result == ESP_OK) {
+    Serial.print("Sent Joystick X Value: ");
+    Serial.println(joyX);
+  } else {
+    Serial.println("Send Error");
+  }
+
+  delay(100);
+}
